@@ -1,0 +1,944 @@
+import React, { useRef, useState,useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+
+import { Box,Button, TextField, Select, MenuItem, FormControl, InputLabel, Checkbox, FormGroup, FormControlLabel, Grid, Radio, RadioGroup } from '@mui/material';
+import { Snackbar, Alert } from '@mui/material';
+import { styled } from '@mui/system';
+import Typography from '@mui/material/Typography';
+
+import ItemDisplayView from './ItemDisplayView';
+import ItemDisplay from './ItemDisplay';
+import ItemDisplay2 from './ItemDisplay2';
+
+import { addnewrecipe } from '../../actions/recipeNewForm.js';
+import { editrecipe } from '../../actions/recipeNewForm.js';
+import { fetchRecipeById } from '../../actions/recipeNewForm.js';
+
+import { uploadimage } from '../../actions/imagesactions.js';
+
+import Quill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
+import ImageForm from './ImageForm'; 
+import { initializetask } from '../../actions/recipeNewForm.js';
+import { setpagemode } from '../../actions/recipeNewForm.js';
+
+import { useParams } from 'react-router-dom';
+
+
+// Fix Quill bullets RTL text overlap
+const quillFixStyles = `
+.ql-editor li {
+  padding-right: 1.4em !important; /* space between bullet and text */
+}
+
+.ql-editor li::before {
+  margin-right: -1.2em !important; /* position bullet correctly */
+  margin-left: 0 !important;
+}
+
+.ql-editor {
+  direction: rtl !important;
+  text-align: right !important;
+}
+`;
+
+
+const TaskForm = ({
+}) => {
+
+  
+  //need to add reset actions..:
+
+  const dispatch = useDispatch();
+
+    const navigate = useNavigate();
+
+    const { id } = useParams();
+  const aIImage = useSelector(state => state.newrecipepage.replicateaiimage);
+  const previouspage = useSelector(state => state.general.previouspage);
+
+    const { user } = useSelector((state) => state.auth);
+   const isLogOut = useSelector((state) => state.auth.islogout);
+
+     // ♿ Accessibility
+        const localaccessibilitySettings = useSelector((state) => state.auth.accessibility);
+        const [accessibilityData, setAccessibilityData] = useState(localaccessibilitySettings);
+      
+        useEffect(() => {
+          if (user && user.accessibility) {
+            setAccessibilityData(user.accessibility);
+          } else {
+            setAccessibilityData(localaccessibilitySettings);
+          }
+        }, [user, localaccessibilitySettings]);
+      
+        const adjustedFontSize = (size) => `${(size * (accessibilityData?.fontSizeAdjustments || 100)) / 100}rem`;
+        const adjustedLineHeight = (defaultValue) => defaultValue * (accessibilityData?.lineSpacing || 1);
+        const adjustedWordSpacing = (defaultValue) => defaultValue * (accessibilityData?.wordSpacing || 1);
+        const adjustedLetterSpacing = (defaultValue) => defaultValue * (accessibilityData?.letterSpacing || 1);
+      
+    // Keyboard shortcuts for accessibility
+    useEffect(() => {
+      const handleKeyDown = (event) => {
+        if (event.altKey) {
+          switch (event.key.toUpperCase()) {
+            case 'D':
+              event.preventDefault();
+              document.getElementById('submit-recipe-button')?.click();
+              break;
+            default:
+              break;
+          }
+        }
+      };
+ window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, []);
+
+    const [selectedOption, setSelectedOption] = useState('upload'); 
+      const currentItem = useSelector(state => state.newrecipepage.currenteditrecipe);
+      const pagemode = useSelector(state => state.newrecipepage.pagemode);
+
+  const [item, setItem] = useState(null);
+  
+  const [imagesFiles, setImagesFiles] = useState([]);
+  const [imageAI, setimageAI] = useState(null);
+    
+
+    const [editmode, setEditmode] = useState(false);
+  const [editbaselineimage, setEditbaselineimage] = useState(null);
+    const [editDelete, setEditDelete] = useState(false);
+
+      const [imageRecipeDisplay, setImageRecipeDisplay] = useState(null);
+ 
+    const [error, setError] = useState(null);
+
+    //This define if the user allowd to update the page
+const [allowEdit, setAllowEdit] = useState(false);
+
+       
+
+
+            useEffect(() => {
+    if (!currentItem && id) {
+      dispatch(fetchRecipeById(id));
+    }
+  }, [currentItem, id, dispatch]);
+
+ 
+    useEffect(() => {
+    if (currentItem) {
+      console.log(currentItem)
+      setItem(currentItem);
+    }
+  }, [currentItem]);
+
+  const [scrollMarginTop, setScrollMarginTop] = useState(-160);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const maxClampValue = task.imageFile === 0 ? 850 : 250;
+
+      const newMarginTop = clamp(-850, maxClampValue, -150 + window.scrollY * 0.9); 
+      setScrollMarginTop(newMarginTop);
+    };
+
+    // Attach the scroll event listener
+    window.addEventListener('scroll', handleScroll);
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  function clamp(min, max, value) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  
+  const initialTaskState = {
+    type: '',
+    typedesign: '',
+    title: '',
+    author: user?.firstName || "",
+    ingredients: '',
+    instructions: '',
+    image: null,
+    selectedCategories: '',
+    selectedTags: [],  
+  level: "קל",
+  numserves: "1-2",
+  groups: [],
+  favorite: [],
+  predecessor: [],
+  };
+
+  const [task, setTask] = useState({ ...initialTaskState });
+
+ 
+useEffect(() => {
+  //first consotion is for edit mode, and secind is for new mode) - OK
+  if (item?.owner === user?._id || !item?.owner) {
+    setAllowEdit(true);
+  } else {
+    setAllowEdit(false);
+  }
+
+}, [item, user]);
+
+  useEffect(() => {
+    if (!item || !item.title) {
+                console.log("Task form item 2:", item); 
+      //initializetaskshould no be here but before.
+      //check what it do?/???
+      dispatch(initializetask());
+      const initialGroups = [];
+    setTask(prev => ({
+      ...prev,
+      ...initialTaskState,
+      groups: initialGroups,
+    }));
+    } else {
+     //this is not contain all item model
+      setTask({
+         _id: item._id,
+                 type:item.type,
+        typedesign:item.typedesign,
+        title: item.title,
+        author: item.author,
+        ingredients: item.ingredients,
+        instructions: item.instructions,
+        image: item.image,
+        selectedCategories: item.selectedCategories,
+        selectedTags: item.selectedTags,
+        level:item.level,
+        numserves:item.numserves,
+        groups: item.groups,
+  owner: item.owner, 
+    favorite: item.favorite, 
+  predecessor: item.predecessor, 
+      });
+                      console.log("Task form item 2:", task); 
+
+      setEditbaselineimage(item.image);
+      setEditmode(true);
+
+    }
+  }, [allowEdit]);
+
+
+  const quillRef1 = useRef(null);
+  const quillRef2 = useRef(null);
+
+  var toolbarOptions = [
+    ['bold', 'italic', 'underline'],        // toggled buttons
+  
+    //[{ 'header': 1 }, { 'header': 2 }],               // custom button values
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    //[{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+      //[{ 'direction': 'rtl' }], 
+    //[{ 'align': [] }], // This enables text alignment options in the toolbar
+
+    //[{ 'direction': 'ltr' }],
+
+    //['image'],                       // text direction
+  
+    //[{ 'header': [1, 2, 3] }],
+  
+    [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+   // [{ 'font': [] }],
+   // [{ 'align': [] }],
+  
+    //['clean']        // remove formatting button
+  ];
+
+  var module ={
+    toolbar:toolbarOptions,
+    };
+    useEffect(() => {
+      if (quillRef1.current) {
+       quillRef1.current.getEditor().root.style.direction = 'rtl';
+       quillRef1.current.getEditor().root.style.textAlign = 'right';
+      }
+      if (quillRef2.current) {
+        quillRef2.current.getEditor().root.style.direction = 'rtl';
+        quillRef2.current.getEditor().root.style.textAlign = 'right';
+      }
+    }, []);
+
+ 
+    const handleingredientsChange = (content, delta, source, editor) => {
+      setTask((task) => ({ ...task, ingredients: content }));
+    };
+  
+    const handleinstructionsChange = (content, delta, source, editor) => {
+      setTask((task) => ({ ...task, instructions: content }));
+    };
+   
+
+
+  const handleCategoryToggle = (category) => {
+  // Set the selected category or clear it if the same category is selected
+  setTask({
+    ...task,
+    selectedCategories:category
+  });
+};
+
+    const handleTagToggle = (Tag) => {
+      const isSelected = task.selectedTags.includes(Tag);
+      if (isSelected) {
+        // Remove category index if already selected
+        setTask({
+          ...task,
+          selectedTags: task.selectedTags.filter((i) => i !== Tag)
+        });
+      } else {
+        // Add category index if not already selected
+        setTask({
+          ...task,
+          selectedTags: [...task.selectedTags, Tag]
+        });
+      }
+    };
+
+
+ const imageUrltemplate = 'https://media.istockphoto.com/id/1368935114/photo/vegan-asian-recipes-assorted-brown-rice-curry-masala-poke-do.jpg?s=1024x1024&w=is&k=20&c=Ff4aFup2u0kQI57KQTjfwC4yUuT5CzzX3s0zeN8Rbew=';
+
+  useEffect(() => {
+  let img = imageUrltemplate;
+  if (pagemode === "view") {
+    if (task?.image) {
+      img = task.image;
+    }
+    setImageRecipeDisplay(img);
+    return;
+  }
+  if (selectedOption === "ImageAI" && aIImage) {
+    img = aIImage;
+    setImageRecipeDisplay(img);
+    return;
+  }
+  if (selectedOption === "upload" && imagesFiles?.length > 0) {
+    const preview = imagesFiles[0]?.preview;
+    if (preview) {
+      img = preview;
+    }
+    setImageRecipeDisplay(img);
+    return;
+  }
+  if (task?.image) {
+    img = task.image;
+  }
+  setImageRecipeDisplay(img);
+}, [
+  pagemode,
+  selectedOption,
+  aIImage,
+  imagesFiles,
+  task,
+  imageUrltemplate
+]);
+
+
+  const handleTaskSubmit = async (e) => {
+    e.preventDefault();
+    let selectedCategories = task.selectedCategories;
+    let selectedTags = task.selectedTags;
+    if (!task.selectedCategories || !task.title || !task.ingredients || !task.instructions) {
+      setError('נא למלא את כל השדות בטופס.');
+      return;
+    } 
+   if (!editmode && ((selectedOption === "upload" && imagesFiles.length === 0) || (selectedOption === "ImageAI" && !imageAI))) {
+  setError("נא לבחור תמונה");
+  return; 
+}
+   
+      if (selectedTags.length === 0) {
+      selectedTags = 
+        [
+          'כללי',
+        ];
+    }
+
+    if (!task.numserves) {
+  task.numserves = "1-2";
+}
+
+if (!task.level) {
+  task.level = "קל";
+}
+
+
+        try {
+
+    const formData = {
+      type:1,
+      owner:1,
+      typedesign:1,
+      title: task.title,
+      author: task.author,
+      ingredients: task.ingredients,
+      instructions: task.instructions,
+      selectedCategories: task.selectedCategories,
+      selectedTags: task.selectedTags,
+      level:task.level,
+      numserves:task.numserves,
+      groups: task.groups,
+    };
+
+const editData = {
+  ...formData,
+  id: task._id 
+};
+  
+let savedItemID;
+
+if (editmode) {
+  await dispatch(editrecipe(editData));
+  savedItemID = editData.id;
+} else {
+  const savedRecipe = await dispatch(addnewrecipe(formData));
+  savedItemID = savedRecipe._id;
+}
+    console.log("Edit completed:");
+
+if (selectedOption === "upload" && imagesFiles.length > 0) {
+    console.log("Upload option selected. Total images:",selectedOption, imagesFiles.length);
+
+              for (const imageObj of imagesFiles) {
+            const imagefile = imageObj.file;
+            if (!imagefile) continue;
+            const fileDetails = {
+              fileName: imageObj.name,
+              fileType: imageObj.type,
+              operation: "upload",
+             savedItemID,
+            };
+            await dispatch(uploadimage(imagefile, fileDetails));
+
+
+          }
+} else if (selectedOption === 'ImageAI' && imageAI) {
+      console.log("ImageAI:",imageAI);
+
+const imagefile = imageAI.file;
+    const fileDetails = {
+      fileName: imageAI.name,
+      fileType: imageAI.type,
+      operation: "upload",
+      savedItemID,
+    };
+    await dispatch(uploadimage(imagefile, fileDetails));
+
+}
+      console.log("image completed :");
+  const initialGroups2 = [];
+    setTask(prev => ({
+      ...prev,
+      ...initialTaskState,
+      groups: initialGroups2,
+    }));
+
+   setError(null); 
+     dispatch(setpagemode("view"));
+  navigate(previouspage || "/myrecipes");
+   
+  } catch (err) {
+    console.log(err);
+    setError(" שגיאה ");
+  }
+
+  };
+
+  const handleCloseError = () => {
+    setError(null);
+  };
+
+
+   return (
+    <>
+      <style>{quillFixStyles}</style>
+{allowEdit && pagemode !== "view" ? (
+
+<Grid
+  container
+  sx={{
+    direction: 'rtl',
+  }}
+>
+        {/* Left – Preview */}
+          {/* Right – Form */}
+<Grid
+  item
+  xs={7}
+  sx={{
+    backgroundColor: '#fff',
+    border: '2px solid #3498db',
+    borderRadius: '10px',
+    boxShadow: 2,
+    p: 3,
+    overflowY: 'auto',        // scroll for entire form
+  }}
+>
+        <Typography
+          variant="h4"
+          sx={{ color: '#00427D', fontWeight: 'bold', mb: 2 }}
+        >
+          {item?.title ? 'עריכת מתכון' : 'יצירת מתכון חדש'}
+        </Typography>
+
+      <form onSubmit={handleTaskSubmit}>
+      <Grid container spacing={2}>
+     
+          <Grid item xs={12}>
+          <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px' }}
+          >
+                                            בחר/י שם מתכון ומחבר/ת
+                                </Typography> 
+              <Grid container spacing={2}>
+                  <Grid item xs={4}> 
+                    <TextField
+                      value={task.title}
+                      onChange={(e) => setTask({ ...task, title: e.target.value })}
+                      fullWidth
+                      label="שם המתכון"
+                    disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}         
+           />
+                  </Grid>
+              </Grid>
+          </Grid>
+
+          <Grid item xs={12}>
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <TextField
+                    label="מחבר/ת"
+                    value={task.author}
+                    onChange={(e) => setTask(
+                      { ...task, author: e.target.value }
+                      )                      // Log the result object
+                    }
+                    fullWidth
+                    disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                  />
+                </Grid>
+             </Grid>
+          </Grid>
+
+
+          <Grid item xs={12}>
+              <Grid container spacing={1}>
+                          <Grid item xs={12}>
+                                  <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold' }}
+          >                                מרכיבים
+                                </Typography>      
+                          <div style={{ height: '200px' }}>
+          <Quill
+          modules={module}
+          theme="snow"
+          value={task.ingredients || ''}
+          onChange={handleingredientsChange}
+          ref={quillRef1}
+          style={{ height: '80%',width: '54%'}}
+          readOnly={!( (item?.owner === user?._id && editmode) || editmode === false )}
+        />
+        </div>
+                           </Grid>
+                        
+
+              </Grid>
+          </Grid>
+          
+          
+          <Grid item xs={12}>
+              <Grid container spacing={1}>
+                          <Grid item xs={12}>
+  
+
+                                <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold'}}
+          >                            הוראות הכנה
+                          </Typography>          
+ <div style={{ height: '200px', width: '100%' }}>
+  <Quill
+    modules={module}
+    theme="snow"
+    value={task.instructions || ''}
+    onChange={handleinstructionsChange}
+    ref={quillRef2}
+          style={{ height: '80%',width: '54%'}}
+readOnly={!( (item?.owner === user?._id && editmode) || editmode === false )}
+  />
+</div>
+                           </Grid>
+              </Grid>
+          </Grid>
+
+          <Grid item xs={12} style={{ marginTop: -15 }}>
+        &nbsp; {/* non-breaking space or padding here for additional space */}
+          </Grid>
+
+          <Grid container spacing={2}>
+          <Grid item xs={12}>
+          <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold' }}>
+קטגוריה (אחת בלבד)                          </Typography> 
+</Grid>
+                
+<Grid item xs={12}>
+    <FormControl>
+      <FormGroup>
+        <div style={{ display: 'flex' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={task.selectedCategories === 'ראשונות'}
+                onChange={() => handleCategoryToggle('ראשונות')}
+                style={{ color: '#0077B5' }}
+                disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+              />
+            }
+            label="ראשונות"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+              checked={task.selectedCategories === 'עיקריות'}
+              onChange={() => handleCategoryToggle('עיקריות')}
+                style={{ color: '#0077B5' }}
+                disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+              />
+            }
+            label="עיקריות"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+              checked={task.selectedCategories === 'קינוחים'}
+                onChange={() => handleCategoryToggle('קינוחים')}
+                style={{ color: '#0077B5' }}
+                disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+              />
+            }
+            label="קינוחים"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+              checked={task.selectedCategories === 'סלטים'}
+                onChange={() => handleCategoryToggle('סלטים')}
+                style={{ color: '#0077B5' }}
+                disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+              />
+            }
+            label="סלטים"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+              checked={task.selectedCategories === 'מרקים'}
+                onChange={() => handleCategoryToggle('מרקים')}
+                style={{ color: '#0077B5' }}
+                disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+              />
+            }
+            label="מרקים"
+          />
+ 
+        </div>
+      </FormGroup>
+    </FormControl>
+  </Grid>
+          </Grid> 
+
+
+          <Grid container spacing={2} style={{ marginTop: 0 }}>
+            <Grid item xs={12} style={{  }}>
+            <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold' }}>
+      תגיות
+
+                          </Typography>            </Grid>
+                
+     
+
+            <Grid item xs={12} style={{  }}>
+               <FormControl>
+                     <FormGroup>
+                     <div style={{ display: 'flex' }}>
+                      
+                      <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('איטלקי')}
+                                        onChange={() => handleTagToggle('איטלקי')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="איטלקי"
+                                  />
+                                            <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('אסייתי')}
+                                        onChange={() => handleTagToggle('אסייתי')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="אסייתי"
+                                  />        <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('חריף')}
+                                        onChange={() => handleTagToggle('חריף')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="חריף"
+                                  />        <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('צמחוני')}
+                                        onChange={() => handleTagToggle('צמחוני')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="צמחוני"
+                                  />
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('טבעוני')}
+                                        onChange={() => handleTagToggle('טבעוני')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="טבעוני"
+                                  />
+                                    <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('ללא גלוטן')}
+                                        onChange={() => handleTagToggle('ללא גלוטן')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="ללא גלוטן"
+                                  />
+                                         <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={task.selectedTags.includes('ללא לקטוז')}
+                                        onChange={() => handleTagToggle('ללא לקטוז')}
+                                        style={{ color: '#0077B5' }}
+disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}
+                                      />
+                                    }
+                                    label="ללא לקטוז"
+                                  />
+
+                                                    </div>
+
+                   </FormGroup>
+             </FormControl>
+          </Grid> 
+          </Grid> 
+
+
+
+          <Grid item xs={12} style={{ marginTop: -20     }}>
+        &nbsp; {/* non-breaking space or padding here for additional space */}
+          </Grid>
+
+          <Grid container spacing={2}>
+                              </Grid>
+
+          <Grid item xs={12} style={{ marginTop: -20     }}>
+        &nbsp; {/* non-breaking space or padding here for additional space */}
+          </Grid>
+
+ <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px' }}
+          >
+                                            בחר/י מס' מנות ורמת קושי
+                                </Typography>  
+
+          <Grid container spacing={2}>
+                <Grid item xs={2.2} style={{  }}>
+                      <FormControl fullWidth style={{ width: '100%' }}>
+                                  <InputLabel>מספר מנות</InputLabel>
+                                  <Select value={task.numserves} onChange={(e) => setTask({ ...task, numserves: e.target.value })}
+                                    disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}>
+                                    <MenuItem value="">מספר מנות</MenuItem>
+                                    {["1-2", "3-4", "5-6","7-10", "11+"].map((numserves) => (
+                                      <MenuItem key={numserves} value={numserves}>
+                                        {numserves}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                      </FormControl>
+                </Grid>
+    
+
+                <Grid item xs={2.2} style={{  }}>
+                        <FormControl fullWidth style={{ width: '100%' }}>
+                                    <InputLabel>רמת קושי</InputLabel>
+                                    <Select value={task.level} onChange={(e) => setTask({ ...task, level: e.target.value })}
+                                      disabled={!( (item?.owner === user?._id && editmode) || editmode === false )}>
+                                      <MenuItem value="">רמת קושי</MenuItem>
+                                      {["קל", "בינוני", "קשה"].map((level) => (
+                                        <MenuItem key={level} value={level}>
+                                          {level}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                            </FormControl>
+                </Grid>
+          </Grid>
+
+ 
+          <Grid item xs={12}>
+            <Typography 
+          variant="h6"
+          style={{ color: 'black', fontSize: '1.2rem', fontWeight: 'bold' }}
+          >
+תמונות                                </Typography> 
+          <ImageForm 
+    item={item}
+    imagesFiles={imagesFiles}
+    setImagesFiles={setImagesFiles}
+    imageAI={imageAI}
+    setimageAI={setimageAI}
+    selectedOption={selectedOption}
+    setSelectedOption={setSelectedOption}
+    task={task}
+    editmode={editmode}
+    editbaselineimage={editbaselineimage}
+     editDelete={editDelete}
+    setEditDelete={setEditDelete}
+  />
+          </Grid>
+        
+          <Grid item xs={12} style={{  }}>
+          <Snackbar
+            open={error !== null}
+            autoHideDuration={6000}
+            onClose={handleCloseError}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} 
+          >
+ <Alert
+              severity="error"
+              onClose={handleCloseError}
+              sx={{
+                backgroundColor: '#FFB0B0', // Light red background
+                fontWeight: 'bold', // Make the text bold
+                color: 'black', // Text color
+                fontSize: '16px', // Increase font size
+              }}
+            >
+                        {error}
+        </Alert>
+      </Snackbar>
+      <Button
+   type="submit"
+   variant="contained"
+   aria-label={item && item.title ? 'עדכון מתכון' : 'הוספת מתכון חדש'}
+   title={item && item.title ? 'עדכון מתכון (Alt+D)' : 'הוספת מתכון (Alt+D)'}
+   id="submit-recipe-button"
+   role="button"
+   sx={{
+     borderRadius: 3,
+     fontSize: adjustedFontSize(1.1),
+     lineHeight: adjustedLineHeight(1.3),
+     letterSpacing: adjustedLetterSpacing(0.04),
+     wordSpacing: adjustedWordSpacing(0.02),
+     padding: '10px 22px',
+     background: 'linear-gradient(135deg, #28a745, #4cd964)', // green gradient
+     color: '#fff',
+     fontWeight: 'bold',
+     boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
+     border: '1px solid rgba(255,255,255,0.3)',
+     transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+     '&:hover': {
+       transform: 'translateY(-2px)',
+       boxShadow: '0 10px 28px rgba(0,0,0,0.3)',
+       background: 'linear-gradient(135deg, #218838, #3ad44e)',
+       border: '1px solid #fff',
+     },
+     '&:focus-visible': {
+       outline: '3px solid #FF6347',
+       outlineOffset: '3px',
+     },
+   }}
+ >
+   {item && item.title ? 'עדכון מתכון' : 'הוספת מתכון '}
+ </Button>
+          </Grid>
+          
+
+        </Grid>
+
+      </form>
+   
+
+  </Grid>
+
+<Grid
+    item
+    xs={5}
+    sx={{
+      position: 'sticky',
+      top: 0,
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      maxHeight: '100vh',       // limit height
+      overflow: 'hidden',       // prevent extra scroll
+    }}
+  >
+    <Box
+      sx={{
+        border: '3px solid #3498db',
+        borderRadius: '10px',
+        boxShadow: 2,
+        transform: 'scale(0.67)',
+        transformOrigin: 'top',   // scale from top
+        width: '100%',
+      }}
+    >
+<ItemDisplay item={task} imageRecipeDisplay={imageRecipeDisplay} />
+    </Box>
+  </Grid>
+    </Grid>
+ ) : (
+      // Else
+<Grid
+  container
+  justifyContent="center"
+  alignItems="center"
+>
+  <ItemDisplayView item={task} />
+</Grid>   
+ )}
+</>
+  );
+};
+
+export default TaskForm;

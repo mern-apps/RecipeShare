@@ -1,0 +1,116 @@
+ const handleunsplashApi = async (shortRecipeName) => {
+    try {
+      const accessKey = '3kBsId8cuVLIrDpTnNr5Jd97ABUGGcUbZw8gdh8Xwkk'; // Replace with your Unsplash Access Key
+      const response = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(shortRecipeName)}&client_id=${accessKey}&per_page=20`);
+      const data = await response.json();
+  
+      // Check if images are found
+      if (data.results.length > 0) {
+        const minAspectRatio = 1;
+          const suitableImages = data.results.filter((result) => {
+          const aspectRatio = result.width / result.height;
+          return aspectRatio >= minAspectRatio;
+        }).map((result) => result.urls.small);
+        const firstNineImages = suitableImages.slice(0, 9);
+            console.log("✅ firstNineImages:", firstNineImages);
+
+        //sned to redux - setUnsplashImagesArray(firstNineImages);
+      } else {
+        console.log('No images found');
+       //sned to redux - setUnsplashImagesArray(firstNineImages);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+
+
+
+    <Grid container spacing={4}>
+      {unsplashImagesArray.map((imageapi, index) => (
+        <Grid item xs={12} sm={6} md={4} key={index}>
+          <img
+            src={imageapi}
+            alt={`Unsplash ${index}`}
+            style={{
+              width: "100%",
+              height: "auto",
+              cursor: "pointer",
+              boxShadow:
+                selectedImageUnsplash === imageapi
+                  ? "0 0 20px rgba(0,0,0,0.9)"
+                  : "none",
+              transform:
+                selectedImageUnsplash === imageapi ? "scale(1.1)" : "scale(1)",
+              transition: "transform 0.3s ease, box-shadow 0.3s ease",
+            }}
+            onClick={() => handleUnsplashImageClick(index)}
+          />
+        </Grid>
+      ))}
+    </Grid>
+
+
+/const fileToBase64 = async (file) => {
+    //  return new Promise((resolve, reject) => {
+         // const reader = new FileReader();
+        //  reader.onload = () => resolve(reader.result);
+        //  reader.onerror = (error) => reject(error);
+        //  reader.readAsDataURL(file);   
+  
+     // });
+
+
+
+       const handleTaskSubmit = async (e) => {
+    e.preventDefault();
+    let selectedCategories = task.selectedCategories;
+    let selectedTags = task.selectedTags;
+    if (!task.selectedCategories || !task.title || !task.ingredients || !task.instructions) {
+      setError('נא למלא את כל השדות בטופס.');
+      return;
+    } 
+   if (!editmode && ((selectedOption === "upload" && imagesFiles.length === 0) || (selectedOption === "ImageAI" && !imageAI))) {
+  setError("נא לבחור תמונה");
+  return; // stop submission
+}
+   
+      if (selectedTags.length === 0) {
+      selectedTags = 
+        [
+          'כללי',
+        ];
+    }
+
+    if (!task.numserves) {
+  task.numserves = "1-2";
+}
+
+if (!task.level) {
+  task.level = "קל";
+}
+
+
+   // let base64Image;
+   // let mimeType;
+   // let imageExtension;
+
+   // if (task.imageFile !== 0) {
+    // const mimeType = task.imageFile.type;
+   // const imageExtension = mimeType.split('/')[1];
+    //  base64Image = await fileToBase64(task.imageFile);
+   // }
+
+
+   // const renderRecipeImages = (item) => { 
+      // if (item.imageFile && item.imageFile.data) {
+       //  const contentType = item.imageFile.contentType;
+        // const base64String = item.imageFile.data;
+        // return `data:${contentType};base64,${base64String}`;
+      // } else if (item.image) {
+       //  return item.image;
+      // }
+      // return ''; // Return an empty string if no image is found
+    // };
+   

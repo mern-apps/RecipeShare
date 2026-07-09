@@ -1,0 +1,295 @@
+import React, { useRef, useState,useEffect } from 'react';
+import { useLocation } from "react-router-dom";
+
+import { Button, TextField, Select, MenuItem, FormControl, InputLabel, Checkbox, FormGroup, FormControlLabel, Grid } from '@mui/material';
+
+import Typography from '@mui/material/Typography';
+
+import { Box } from '@mui/material';
+
+
+import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
+
+import HeaderUserSign from '../../ComponentsMobile/HeaderUserSign.js';
+
+
+import LayoutFilter from '../../ComponentsMobile/HomePage/Layout1Filter.js';
+import Allrecipes from '../../ComponentsMobile/AllRecipes/Allrecipes.js';
+import AllrecipesFavorite from '../../ComponentsMobile/AllRecipes/Favorite/AllrecipesFavorite.js';
+import Best from '../../ComponentsMobile/HomePage/Best.js';
+import Cuisine from '../../ComponentsMobile/HomePage/Cuisine.js';
+
+import Categories from '../../ComponentsMobile/HomePage/Categories.js';
+import Tags from '../../ComponentsMobile/HomePage/Tags.js';
+
+import { setfiltercategories } from '../../actions/recipespage.js';
+import { setfiltertags } from '../../actions/recipespage.js';
+import { newformID } from '../../actions/bookPageActions.js';
+
+ import { previouspage } from '../../actions/recipeNewForm.js';
+
+
+const AllRecipesMobile = () => {
+    const dispatch = useDispatch();
+  const location = useLocation();
+
+    const  {user}  = useSelector((state) => state.auth);
+
+ // ♿ Accessibility
+        const localaccessibilitySettings = useSelector((state) => state.auth.accessibility);
+        const [accessibilityData, setAccessibilityData] = useState(localaccessibilitySettings);
+      
+        useEffect(() => {
+          if (user && user.accessibility) {
+            setAccessibilityData(user.accessibility);
+          } else {
+            setAccessibilityData(localaccessibilitySettings);
+          }
+        }, [user, localaccessibilitySettings]);
+      
+        const adjustedFontSize = (size) => `${(size * (accessibilityData?.fontSizeAdjustments || 100)) / 100}rem`;
+        const adjustedLineHeight = (defaultValue) => defaultValue * (accessibilityData?.lineSpacing || 1);
+        const adjustedWordSpacing = (defaultValue) => defaultValue * (accessibilityData?.wordSpacing || 1);
+        const adjustedLetterSpacing = (defaultValue) => defaultValue * (accessibilityData?.letterSpacing || 1);
+      
+    // Keyboard shortcuts for accessibility
+    useEffect(() => {
+      const handleKeyDown = (event) => {
+        if (event.altKey) {
+          switch (event.key.toUpperCase()) {
+            case 'F':
+              event.preventDefault();
+              document.getElementById('home-page-button')?.click();
+              break;
+            default:
+              break;
+          }
+        }
+      };
+ window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, []);
+
+
+  const filtercategories = useSelector(state => state.recipespage.filtercategories);
+  const filtertags = useSelector(state => state.recipespage.filtertags);
+
+
+ const [activeCategories, setActiveCategories] = useState([]);
+ const [activeTags, setActiveTags] = useState([]);
+
+
+useEffect(() => {
+  const resetCategories = filtercategories.map(cat => ({
+    ...cat,
+    active: false
+  }));
+  const resetTags = filtertags.map(tag => ({
+    ...tag,
+    active: false
+  }));
+
+  dispatch(setfiltercategories(resetCategories));
+  dispatch(setfiltertags(resetTags));
+}, []); // only on first render
+  
+  useEffect(() => {
+  dispatch(newformID(null));
+  dispatch(previouspage(location.pathname + location.search));
+  }, [dispatch]);
+
+   useEffect(() => {
+  // Update activeCategories to contain only descriptions of active categories
+  setActiveCategories(
+    filtercategories
+      .filter(category => category.active)
+      .map(category => category.description)
+  );
+}, [filtercategories]);
+
+useEffect(() => {
+  // Update activeTags to contain only descriptions of active tags
+  setActiveTags(
+    filtertags
+      .filter(tag => tag.active)
+      .map(tag => tag.description)
+  );
+}, [filtertags]);
+
+ const handleButtonClickcategorytest = (categoryDescription) => {
+  const updatedFiltercategories = filtercategories.map(category =>
+    category.description === categoryDescription
+      ? { ...category, active: !category.active } // יצירת אובייקט חדש
+      : category
+  );
+  dispatch(setfiltercategories(updatedFiltercategories));
+};
+
+const handleButtonClicktagtest = (tagDescription) => {
+  const updatedFiltertags = filtertags.map(tag =>
+    tag.description === tagDescription
+      ? { ...tag, active: !tag.active } // יצירת אובייקט חדש
+      : tag
+  );
+  dispatch(setfiltertags(updatedFiltertags));
+};
+  
+return (
+  <div style={{ backgroundColor: "#F5F5F5" }}>
+    <Grid container spacing={2} justifyContent="center">
+
+     <Grid item xs={12}>
+    <Typography
+      sx={{
+        color: "#1e60d6",
+        fontFamily: "Kroshe Hebrew, sans-serif",
+        fontWeight: "bold",
+        textAlign: "right",
+        mr: 1,
+        fontSize: "30px",
+      }}
+    >
+      כל המתכונים שלך
+    </Typography>
+  </Grid>
+
+      {/* FILTER SECTION */}
+      <Grid item xs={12}>
+        <LayoutFilter
+          activeCategories={activeCategories}
+          filtercategories={filtercategories}
+          handleButtonClickcategorytest={handleButtonClickcategorytest}
+          activeTags={activeTags}
+          filtertags={filtertags}
+          handleButtonClicktagtest={handleButtonClicktagtest}
+        />
+      </Grid>
+
+      {/* LOGGED IN CONTENT */}
+      {user?._id && (
+        <>
+          <Grid item xs={12} >
+            <Allrecipes
+              activeCategories={activeCategories}
+              activeTags={activeTags}
+              filtercategories={filtercategories}
+              filtertags={filtertags}
+            />
+          </Grid>
+
+          <Grid item xs={12} >
+            <AllrecipesFavorite
+              activeCategories={activeCategories}
+              activeTags={activeTags}
+              filtercategories={filtercategories}
+              filtertags={filtertags}
+            />
+          </Grid>
+        </>
+      )}
+
+      {/* NOT LOGGED IN */}
+      {!user?._id && (
+        <Grid
+          item
+          xs={12}
+          style={{
+            marginTop: "30px",
+            marginBottom: "20px",
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: 400,
+              background: "linear-gradient(135deg, #e6e0f8, #d0e7ff)",
+              borderRadius: 3,
+              p: 3,
+              textAlign: "right",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+              border: "1px solid rgba(255,255,255,0.4)",
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: "bold",
+                color: "#1a237e",
+                fontSize: "1.5rem",
+              }}
+            >
+              אינך מחובר
+            </Typography>
+
+            <Typography
+              variant="body1"
+              sx={{
+                color: "#3f51b5",
+                mb: 1,
+                fontSize: "1.3rem",
+              }}
+            >
+              נא להתחבר כדי לראות את המתכונים שלך
+            </Typography>
+
+            <Button
+              id="home-page-button"
+              component={Link}
+              to="/"
+              variant="contained"
+              sx={{
+                background: "linear-gradient(135deg, #5c74eeff, rgba(57, 74, 172, 1))",
+                color: "#ffffffff",
+                fontWeight: "bold",
+                borderRadius: 2,
+                padding: "10px 20px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                transition: "all 0.3s ease",
+                fontSize: adjustedFontSize(1.1),
+                lineHeight: adjustedLineHeight(1.3),
+                letterSpacing: adjustedLetterSpacing(0.04),
+                wordSpacing: adjustedWordSpacing(0.02),
+
+                "&:hover": {
+                  background: "linear-gradient(135deg, #5c6bc0, #7986cb)",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.15)",
+                },
+              }}
+            >
+              חזרה לדף הבית
+            </Button>
+          </Box>
+        </Grid>
+      )}
+
+      {/* BEST SECTION */}
+      <Grid item xs={12}>
+        <Best
+          activeCategories={activeCategories}
+          activeTags={activeTags}
+          filtercategories={filtercategories}
+          filtertags={filtertags}
+        />
+      </Grid>
+
+      {/* CUISINE SECTION */}
+      <Grid item xs={12}>
+        <Cuisine
+          activeCategories={activeCategories}
+          activeTags={activeTags}
+          filtercategories={filtercategories}
+          filtertags={filtertags}
+        />
+      </Grid>
+
+    </Grid>
+  </div>
+);
+
+};
+
+export default AllRecipesMobile;
