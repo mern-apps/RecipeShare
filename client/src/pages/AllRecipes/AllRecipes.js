@@ -13,8 +13,6 @@ import { Link } from 'react-router-dom';
 
 import HeaderUserSign from '../../Components/HeaderUserSign.js';
 
-import BooksRecipes from '../../Components/HomePage/BooksRecipes.js';
-import GroupsRecipes from '../../Components/HomePage/GroupRecipes/GroupsRecipes.js';
 
 import LayoutFilter from '../../Components/HomePage/Layout1Filter.js';
 import Best from '../../Components/HomePage/Best.js'; //best
