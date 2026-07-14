@@ -2,10 +2,8 @@ import axios from 'axios';
 
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000',
+  baseURL: process.env.REACT_APP_API || 'http://localhost:5000',
 });
-
-
 
 export const editrecipepage1 = (newTask, token) => API.post('/recipes/editrecipepage1',newTask, {
   headers: { Authorization: `Bearer ${token}` },
