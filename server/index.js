@@ -46,8 +46,13 @@ app.use(cookieParser());
 //app.use(cors());
 
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? ['http://localhost:3000'] // replace with 'https://logicmatching.com', 'https://www.logicmatching.com' - your actual frontend URLs
-  : ['http://localhost:3000'];
+  ? [
+      'https://recipegroup.org',
+      'https://www.recipegroup.org'
+    ]
+  : [
+      'http://localhost:3000'
+    ];
 
 const corsOptions = {
   origin: function(origin, callback) {
